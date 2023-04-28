@@ -26,3 +26,7 @@ Route::post('chooseSeat',  [TarnibController::class, 'chooseSeat']);
 Route::get('roundInfo',  [TarnibController::class, 'getRoundInfo']);
 Route::post('bid',  [TarnibController::class, 'bid']);
 Route::post('setTarnib',  [TarnibController::class, 'setTarnib']);
+Route::post('playCard',  [TarnibController::class, 'playCard']);
+Route::post('setNewTurn',  [TarnibController::class, 'setNewTurn']);
+Route::post('setNewRound',  [TarnibController::class, 'setNewRound']);
+Route::get('test',  [TarnibController::class, 'test']);

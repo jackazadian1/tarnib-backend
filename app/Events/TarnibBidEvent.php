@@ -14,16 +14,14 @@ class TarnibBidEvent implements shouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    private int $player_index;
-    private int $amount;
+    private $bids_data;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(int $player_index, string $amount)
+    public function __construct($bids_data)
     {
-        $this->player_index = $player_index;
-        $this->amount = $amount;
+        $this->bids_data = $bids_data;
     }
 
     /**
@@ -43,9 +41,6 @@ class TarnibBidEvent implements shouldBroadcast
     }
 
     public function broadcastWith(){
-        return [
-            'player_index' => $this->player_index,
-            'amount' => $this->amount,
-        ];
+        return json_decode(json_encode($this->bids_data), true);
     }
 }

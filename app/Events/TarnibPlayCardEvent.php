@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class TarnibChooseTarnibEvent implements shouldBroadcast
+class TarnibPlayCardEvent implements shouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -37,7 +37,7 @@ class TarnibChooseTarnibEvent implements shouldBroadcast
     }
 
     public function broadcastAs(){
-        return 'tarnib-chosen';
+        return 'card-played';
     }
 
     public function broadcastWith(){

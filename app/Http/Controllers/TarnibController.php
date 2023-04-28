@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Broadcast;
 
-
 class TarnibController extends Controller
 {
     public $cards = [
@@ -46,62 +45,72 @@ class TarnibController extends Controller
         '10_of_diamonds',
         '10_of_hearts',
         '10_of_spades',
-        'jack_of_clubs',
-        'jack_of_diamonds',
-        'jack_of_hearts',
-        'jack_of_spades',
-        'queen_of_clubs',
-        'queen_of_diamonds',
-        'queen_of_hearts',
-        'queen_of_spades',
-        'king_of_clubs',
-        'king_of_diamonds',
-        'king_of_hearts',
-        'king_of_spades',
-        'ace_of_clubs',
-        'ace_of_diamonds',
-        'ace_of_hearts',
-        'ace_of_spades'
+        '11_of_clubs',
+        '11_of_diamonds',
+        '11_of_hearts',
+        '11_of_spades',
+        '12_of_clubs',
+        '12_of_diamonds',
+        '12_of_hearts',
+        '12_of_spades',
+        '13_of_clubs',
+        '13_of_diamonds',
+        '13_of_hearts',
+        '13_of_spades',
+        '14_of_clubs',
+        '14_of_diamonds',
+        '14_of_hearts',
+        '14_of_spades'
     ];
 
     public function createRoom(Request $request){
 
         $room_id = $this->generateRandomString();
-        $random_cards = $this->cards;
-        shuffle($random_cards);
+        
 
         $id = DB::table('rooms')->insertGetId([
             'room_id' => $room_id,
             'player_1' => $request->player_name,
             'team_1_score' => 0,
             'team_2_score' => 0,
-            
-
         ]);
 
-        $round_id = DB::table('rounds')->insertGetId([
-            'room_id' => $id,
-            'player_1_cards' => json_encode(array_slice($random_cards, 0, 13)),
-            'player_2_cards' => json_encode(array_slice($random_cards, 13, 13)),
-            'player_3_cards' => json_encode(array_slice($random_cards, 26, 13)),
-            'player_4_cards' => json_encode(array_slice($random_cards, 39, 13)),
-            'turn' => 1,
-            'team_1_score' => 0,
-            'team_2_score' => 0,
-            'dealer' => 0,
-            'bids_data' => json_encode([
-                'bids' => [0,0,0,0],
-                'current_bidder' => 1
-            ])
-        ]);
+
 
         DB::table('rooms')->where('id', $id)->update([
-            'round_id' => $round_id
+            'round_id' => $this->createRound($id)
         ]);
 
 
         return response()->json(['success' => true, 'room_id' => $room_id, 'player_name' => $request->player_name]);
 
+    }
+
+    function createRound($room_id){
+
+        $random_cards = $this->cards;
+        shuffle($random_cards);
+        $round_number = count(DB::table('rounds')->where('room_id', $room_id)->get());
+        $round_id = DB::table('rounds')->insertGetId([
+            'room_id' => $room_id,
+            'player_1_cards' => json_encode($this->sortCards(array_slice($random_cards, 0, 13))),
+            'player_2_cards' => json_encode($this->sortCards(array_slice($random_cards, 13, 13))),
+            'player_3_cards' => json_encode($this->sortCards(array_slice($random_cards, 26, 13))),
+            'player_4_cards' => json_encode($this->sortCards(array_slice($random_cards, 39, 13))),
+            'turn' => 1,
+            'team_1_score' => 0,
+            'team_2_score' => 0,
+            'dealer' => $round_number%4,
+            'bids_data' => json_encode([
+                'bids' => [0,0,0,0],
+                'current_bidder' => ($round_number+1)%4
+            ]),
+            'current_play' => json_encode(['','','','']),
+            'player_turn' => -1,
+
+        ]);
+
+        return $round_id;
     }
 
     function joinRoom(Request $request){
@@ -111,6 +120,8 @@ class TarnibController extends Controller
         else if($room->player_2 == $request->player_name) $player_seat = 2;
         else if($room->player_3 == $request->player_name) $player_seat = 3;
         else if($room->player_4 == $request->player_name) $player_seat = 4;
+
+        $round_count = count(DB::table('rounds')->where('id', $room->round_id)->get());
 
         $round = DB::table('rounds')->where('id', $room->round_id)->first();
         if($player_seat != ''){
@@ -127,18 +138,10 @@ class TarnibController extends Controller
             }
         }
 
-        if($cards != []){
-            $cards = $this->sortCards($cards);
-        }
+        // if($cards != []){
+        //     $cards = $this->sortCards($cards);
+        // }
 
-        // Broadcast::channel('game', function ($request) {
-        //     return ['name' => $request->player_name];
-        // });
-
-        // Broadcast::event('game.message', [
-        //     'user' => $request->player_name,
-        //     'message' => 'test',
-        // ])->toOthers();
         
 
         return view('game')->with([
@@ -149,14 +152,20 @@ class TarnibController extends Controller
             'player_2' => $room->player_2,
             'player_3' => $room->player_3,
             'player_4' => $room->player_4,
+            'round' => $round_count,
             'turn' => $round->turn,
             'cards' => $cards,
+            'bids_data' => json_decode($round->bids_data),
+            'goal' => $round->goal,
+            'player_turn' => $round->player_turn,
+            'current_play' => json_decode($round->current_play)
         ]);
     }
 
     function getRoundInfo(Request $request){
         $room = DB::table('rooms')->where('room_id', $request->room_id)->first();
         $round = DB::table('rounds')->where('id', $room->round_id)->first();
+        $round_count = count(DB::table('rounds')->where('id', $room->round_id)->get());
 
         $player_seat = '';
         if($room->player_1 == $request->player_name) $player_seat = 1;
@@ -176,10 +185,6 @@ class TarnibController extends Controller
             $cards = [];
         }
 
-        if($cards != []){
-            $cards = $this->sortCards($cards);
-        }
-
         return response()->json([
             'player_seat' => $player_seat,
             'room_id' => $room->room_id,
@@ -187,23 +192,37 @@ class TarnibController extends Controller
             'player_2' => $room->player_2,
             'player_3' => $room->player_3,
             'player_4' => $room->player_4,
+            'round' => $round_count,
             'turn' => $round->turn,
             'cards' => $cards,
             'dealer' => $round->dealer,
             'tarnib' => $round->tarnib,
-            'bids_data' => json_decode($round->bids_data)
+            'bids_data' => json_decode($round->bids_data),
+            'goal' => $round->goal,
+            'player_turn' => $round->player_turn,
+            'current_play' => json_decode($round->current_play),
+            'team_1_score' => $round->team_1_score,
+            'team_2_score' => $round->team_2_score,
+            'team_1_game_score' => $room->team_1_score,
+            'team_2_game_score' => $room->team_2_score,
         ]);
     }
 
     function chooseSeat(Request $request){
         $player_number = "player_".$request->seat;
-        DB::table('rooms')->where('room_id', $request->room_id)->update([
+        $room = DB::table('rooms')->where('room_id', $request->room_id);
+        $room->update([
             $player_number => $request->player_name
         ]);
 
-        event(new \App\Events\TarnibChooseSeatEvent($request->seat, $request->player_name));
+        $round = DB::table('rounds')->where('id', $room->first()->round_id)->first();
+        $player_cards = 'player_'.$request->seat.'_cards';
+        
+        broadcast(new \App\Events\TarnibChooseSeatEvent($request->seat, $request->player_name))->toOthers();
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'player_cards' => json_decode($round->$player_cards)
+        ]);
     }
 
     function sortCards($cards){
@@ -243,24 +262,7 @@ class TarnibController extends Controller
             for($j = 0; $j < count($cards)-1; $j++){
                 $val1 = str_replace($suffix, "",$cards[$j]);
                 $val2 = str_replace($suffix, "",$cards[$j+1]);
-
-                if($val2 == "ace"){
-                    $temp = $cards[$j];
-                    $cards[$j] = $cards[$j+1];
-                    $cards[$j+1] = $temp;
-                }elseif ($val2 == "king" && $val1 != "ace") {
-                    $temp = $cards[$j];
-                    $cards[$j] = $cards[$j+1];
-                    $cards[$j+1] = $temp;
-                }elseif ($val2 == "queen" && $val1 != "ace" && $val1 != "king") {
-                    $temp = $cards[$j];
-                    $cards[$j] = $cards[$j+1];
-                    $cards[$j+1] = $temp;
-                }elseif ($val2 == "jack" && $val1 != "ace" && $val1 != "king" && $val1 != "queen") {
-                    $temp = $cards[$j];
-                    $cards[$j] = $cards[$j+1];
-                    $cards[$j+1] = $temp;
-                }elseif ($val2 > $val1 && is_numeric($val1) && is_numeric($val2)) {
+                if ($val2 > $val1) {
                     $temp = $cards[$j];
                     $cards[$j] = $cards[$j+1];
                     $cards[$j+1] = $temp;
@@ -276,7 +278,7 @@ class TarnibController extends Controller
         $round_id = DB::table('rooms')->where('room_id', $request->room_id)->first()->round_id;
         $round = DB::table('rounds')->where('id', $round_id)->select('bids_data')->first();
         $bids_data = json_decode($round->bids_data);
-        //event(new \App\Events\TarnibChooseSeatEvent($request->seat, $request->player_name));
+
         if($request->player_index == $bids_data->current_bidder){
             $bids_data->bids[$request->player_index] = $request->amount;
             $next_bidder = $bids_data->current_bidder+1 == 4 ? 0 : $bids_data->current_bidder+1;
@@ -291,20 +293,178 @@ class TarnibController extends Controller
             'bids_data' => json_encode($bids_data)
         ]);
 
-        event(new \App\Events\TarnibBidEvent($request->player_index, $request->amount));
+        broadcast(new \App\Events\TarnibBidEvent($bids_data))->toOthers();
 
-        return response()->json();
+        return response()->json($bids_data);
     }
 
     function setTarnib(Request $request){
         $round_id = DB::table('rooms')->where('room_id', $request->room_id)->first()->round_id;
-        DB::table('rounds')->where('id', $round_id)->update([
-            'tarnib' => $request->tarnib
+        $data = [
+            'tarnib' => $request->tarnib,
+            'goal' => $request->goal,
+            'player_turn' => $request->player_turn
+        ];
+        DB::table('rounds')->where('id', $round_id)->update($data);
+
+        broadcast(new \App\Events\TarnibChooseTarnibEvent($data))->toOthers();
+
+        return response()->json($data);
+    }
+
+    function playCard(Request $request){
+        $round_id = DB::table('rooms')->where('room_id', $request->room_id)->first()->round_id;
+
+        $round = DB::table('rounds')->where('id', $round_id);
+
+        $current_play = json_decode($round->first()->current_play);
+
+        $current_play[$request->player_seat-1] = $request->card;
+        $player = 'player_'.$request->player_seat.'_cards';
+        $player_cards = json_decode($round->first()->$player);
+        unset($player_cards[array_search($request->card, $player_cards)]);
+
+        $res = [
+            'current_play' => $current_play,
+            'player_turn' => $round->first()->player_turn + 1 > 3 ? 0 : $round->first()->player_turn + 1,
+            'player_cards' => array_values($player_cards)
+        ];
+        $round->update([
+            'current_play' => json_encode($current_play),
+            'player_turn' => $round->first()->player_turn + 1 > 3 ? 0 : $round->first()->player_turn + 1,
+            'player_'.$request->player_seat.'_cards' => array_values($player_cards)
         ]);
 
-        event(new \App\Events\TarnibChooseTarnibEvent($request->tarnib));
+        broadcast(new \App\Events\TarnibPlayCardEvent($res))->toOthers();
+
+        return response()->json($res);
+    }
+
+    function setNewTurn(Request $request){
+        $round_id = DB::table('rooms')->where('room_id', $request->room_id)->first()->round_id;
+
+        $round = DB::table('rounds')->where('id', $round_id);
+        $round_data = $round->first();
+
+        $highest_card_index = $this->findHighestCard(json_decode($round_data->current_play), $this->cardValue(json_decode($round_data->current_play)[intval($round_data->player_turn)])['suit'], $round_data->tarnib);
+        $scoring_team = '';
+
+        if($highest_card_index == 0 || $highest_card_index == 2){
+            $scoring_team = 'team_1_score';
+        }else{
+            $scoring_team = 'team_2_score';
+        }
+        $score = intval($round_data->$scoring_team)+1;
+        $turn = intval($round_data->turn)+1;
+
+        $round->update([
+            'turn' => $turn,
+            $scoring_team => $score,
+            'player_turn' => $highest_card_index,
+            'current_play' => ['','','','']
+        ]);
+
+        $res = [
+            'turn' => $turn,
+            $scoring_team => $score,
+            'player_turn' => $highest_card_index,
+        ];
+
+        broadcast(new \App\Events\TarnibNewTurnEvent($res))->toOthers();
+
+        return response()->json($res);
+
+    }
+
+    public function test(){
+        $highest_card_index = $this->findHighestCard(["9_of_diamonds", "7_of_diamonds", "4_of_spades", "13_of_spades"], 'spades', 'spades');
+
+        return response()->json($highest_card_index);
+    }
+
+    function findHighestCard($cards, $current_play_suit, $tarnib){
+        $highest_index = 0;
+
+        for ($i=1; $i < count($cards); $i++) { 
+            // clock($cards[$i]);
+            // clock($highest_index);
+            // clock($this->cardValue($cards[$i])['suit'] == $current_play_suit);
+            // clock($this->cardValue($cards[$highest_index])['suit'] == $tarnib);
+
+            if($this->cardValue($cards[$i])['suit'] == $current_play_suit){
+                if($this->cardValue($cards[$highest_index])['suit'] == $tarnib){
+                    if($current_play_suit ==  $tarnib){
+                        if($this->cardValue($cards[$i])['value'] > $this->cardValue($cards[$highest_index])['value']){
+                            $highest_index = $i;
+                        }
+                    }
+                }else{
+                    if($current_play_suit !=  $tarnib){
+                        if($this->cardValue($cards[$i])['value'] > $this->cardValue($cards[$highest_index])['value']){
+                            $highest_index = $i;
+                        }
+                    }else{
+                        $highest_index = $i;
+                    }
+                }
+            }else{
+                if($this->cardValue($cards[$i])['suit'] == $tarnib){
+                    if($this->cardValue($cards[$highest_index])['suit'] == $tarnib){
+                        if($this->cardValue($cards[$i])['value'] > $this->cardValue($cards[$highest_index])['value']){
+                            $highest_index = $i;
+                        }
+                    }else{
+                        $highest_index = $i;
+                    }
+                }
+            }
+        }
+
+        return $highest_index;
+    }
+
+    function cardValue($card){
+        return [
+            "value" => intval(explode('_of_',$card)[0]),
+            "suit" => explode('_of_',$card)[1]
+        ];
+    }
+
+    function setNewRound(Request $request){
+
+        $room = DB::table('rooms')->where('room_id', $request->room_id);
+        $old_round = DB::table('rounds')->where('id',$room->first()->round_id)->first();
+
+        $bid_winner = json_decode($old_round->bids_data)->current_bidder;
+
+        $update = [
+            'team_1_score' => $room->first()->team_1_score,
+            'team_2_score' => $room->first()->team_2_score,
+        ];
+
+        if($bid_winner == 0 || $bid_winner == 2){
+            if($old_round->goal <= $old_round->team_1_score){
+                $update['team_1_score'] = $update['team_1_score'] + $old_round->team_1_score;
+            }else{
+                $update['team_1_score'] = $update['team_1_score'] - $old_round->goal;
+                $update['team_2_score'] = $update['team_2_score'] + $old_round->team_2_score;
+            }
+        }else{
+            if($old_round->goal <= $old_round->team_2_score){
+                $update['team_2_score'] = $update['team_2_score'] + $old_round->team_2_score;
+            }else{
+                $update['team_2_score'] = $update['team_2_score'] - $old_round->goal;
+                $update['team_1_score'] = $update['team_1_score'] + $old_round->team_1_score;
+            }
+        }
+        $new_round_id = $this->createRound($room->first()->id);
+
+        $update['round_id'] = $new_round_id;
+
+        $room->update($update);
 
         return response()->json(['success' => true]);
+
     }
 
     function generateRandomString($length = 6) {
