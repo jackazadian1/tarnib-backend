@@ -15,13 +15,17 @@ class TarnibNewRoundEvent implements shouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     private $data;
+    private $room_id;
+    private $token;
 
     /**
      * Create a new event instance.
      */
-    public function __construct($data)
+    public function __construct($data, $room_id, $token)
     {
         $this->data = $data;
+        $this->room_id = $room_id;
+        $this->token = $token;
     }
 
     /**
@@ -32,12 +36,12 @@ class TarnibNewRoundEvent implements shouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new Channel('public.room.1'),
+            new Channel('public.room.'.$this->room_id.$this->token),
         ];
     }
 
     public function broadcastAs(){
-        return 'new-turn';
+        return 'new-round';
     }
 
     public function broadcastWith(){

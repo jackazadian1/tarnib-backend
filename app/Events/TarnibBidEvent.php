@@ -15,13 +15,15 @@ class TarnibBidEvent implements shouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     private $bids_data;
+    private $room_id;
 
     /**
      * Create a new event instance.
      */
-    public function __construct($bids_data)
+    public function __construct($bids_data, $room_id)
     {
         $this->bids_data = $bids_data;
+        $this->room_id = $room_id;
     }
 
     /**
@@ -32,7 +34,7 @@ class TarnibBidEvent implements shouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new Channel('public.room.1'),
+            new Channel('public.room.'.$this->room_id),
         ];
     }
 

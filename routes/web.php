@@ -22,5 +22,3 @@ Route::get('/playground', function () {
     event(new \App\Events\PlaygroundEvent());
     return null;
 });
-
-

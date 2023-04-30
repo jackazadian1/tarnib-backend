@@ -16,14 +16,16 @@ class TarnibChooseSeatEvent implements shouldBroadcast
 
     private int $player_number;
     private string $player_name;
+    private $room_id;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(int $player_number, string $player_name)
+    public function __construct(int $player_number, string $player_name, $room_id)
     {
         $this->player_number = $player_number;
         $this->player_name = $player_name;
+        $this->room_id = $room_id;
     }
 
     /**
@@ -34,7 +36,7 @@ class TarnibChooseSeatEvent implements shouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new Channel('public.room.1'),
+            new Channel('public.room.'.$this->room_id),
         ];
     }
 

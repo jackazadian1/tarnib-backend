@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('rooms', function (Blueprint $table) {
             $table->id();
             $table->string('room_id')->nullable();
-            $table->string('player_1')->default('');
-            $table->string('player_2')->default('');
-            $table->string('player_3')->default('');
-            $table->string('player_4')->default('');
+            $table->string('player_1')->nullable();
+            $table->string('player_2')->nullable();
+            $table->string('player_3')->nullable();
+            $table->string('player_4')->nullable();
             $table->string('player_1_token')->nullable();
             $table->string('player_2_token')->nullable();
             $table->string('player_3_token')->nullable();

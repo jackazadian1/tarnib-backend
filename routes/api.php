@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TarnibController;
+use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,4 +31,3 @@ Route::post('playCard',  [TarnibController::class, 'playCard']);
 Route::post('setNewTurn',  [TarnibController::class, 'setNewTurn']);
 Route::post('setNewRound',  [TarnibController::class, 'setNewRound']);
 Route::get('test',  [TarnibController::class, 'test']);
-Route::get('/getSessionToken', [TarnibController::class, 'getSessionToken']);
