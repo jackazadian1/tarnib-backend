@@ -77,7 +77,7 @@ class EndOfRoundSeeder extends Seeder
         $random_cards=array_rand($this->cards,4);
 
         $round_id = DB::table('rounds')->insertGetId([
-            'room_id' => 2,
+            'room_id' => 1,
             'player_1_cards' => json_encode([$this->cards[$random_cards[0]]]),
             'player_2_cards' => json_encode([$this->cards[$random_cards[1]]]),
             'player_3_cards' => json_encode([$this->cards[$random_cards[2]]]),
@@ -96,7 +96,7 @@ class EndOfRoundSeeder extends Seeder
             'player_turn' => rand(0,3)
         ]);
 
-        DB::table('rooms')->where('id', 2)->update([
+        DB::table('rooms')->where('id', 1)->update([
             'round_id' => $round_id
         ]);
     }
