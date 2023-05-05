@@ -373,6 +373,7 @@ class TarnibController extends Controller
             'turn' => $turn,
             $scoring_team => $score,
             'player_turn' => $highest_card_index,
+            'previous_play' =>$request->previous_play,
         ];
 
         broadcast(new \App\Events\TarnibNewTurnEvent($res, $request->room_id))->toOthers();
