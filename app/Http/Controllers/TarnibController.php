@@ -90,6 +90,7 @@ class TarnibController extends Controller
         $random_cards = $this->cards;
         shuffle($random_cards);
         $round_number = count(DB::table('rounds')->where('room_id', $room_id)->get());
+        $dealer= $round_number == 0 ? rand(0,3) : $round_number%4;
         $round_id = DB::table('rounds')->insertGetId([
             'room_id' => $room_id,
             'player_1_cards' => json_encode($this->sortCards(array_slice($random_cards, 0, 13))),
@@ -99,7 +100,7 @@ class TarnibController extends Controller
             'turn' => 1,
             'team_1_score' => 0,
             'team_2_score' => 0,
-            'dealer' => $round_number%4,
+            'dealer' => $dealer,
             'bids_data' => json_encode([
                 'bids' => [0,0,0,0],
                 'current_bidder' => ($round_number+1)%4
@@ -495,7 +496,6 @@ class TarnibController extends Controller
                     'team_1_game_score' => $room->first()->team_1_score,
                     'team_2_game_score' => $room->first()->team_2_score,
                 ]; 
-                Log::info($data);
                 broadcast(new \App\Events\TarnibNewRoundEvent($data, $request->room_id, $player_token));
             }
         }
@@ -519,6 +519,34 @@ class TarnibController extends Controller
             'team_2_game_score' => $room->first()->team_2_score,
         ]);
 
+    }
+
+    function moveToNewRoom(Request $request){
+        $room = DB::table('rooms')->where('room_id', $request->room_id)->first();
+
+        $new_room_id = $this->generateRandomString(); 
+
+        $id = DB::table('rooms')->insertGetId([
+            'room_id' => $new_room_id,
+            'player_1' => $room->player_1,
+            'player_1_token' => $room->player_1_token,
+            'player_2' => $room->player_2,
+            'player_2_token' => $room->player_2_token,
+            'player_3' => $room->player_3,
+            'player_3_token' => $room->player_3_token,
+            'player_4' => $room->player_4,
+            'player_4_token' => $room->player_4_token,
+            'team_1_score' => 0,
+            'team_2_score' => 0,
+        ]);
+
+        DB::table('rooms')->where('id', $id)->update([
+            'round_id' => $this->createRound($id)
+        ]);
+
+        broadcast(new \App\Events\TarnibMoveToNewRoomEvent($new_room_id, $request->room_id))->toOthers();
+
+        return response()->json(['room_id' => $new_room_id]);
     }
 
     function generateRandomString($length = 6) {
