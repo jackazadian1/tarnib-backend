@@ -384,7 +384,7 @@ class TarnibController extends Controller
     }
 
     public function test(){
-        $highest_card_index = $this->findHighestCard(["9_of_diamonds", "7_of_diamonds", "4_of_spades", "13_of_spades"], 'spades', 'spades');
+        $highest_card_index = $this->findHighestCard(["10_of_diamonds", "12_of_diamonds", "12_of_hearts", "8_of_clubs"], 'clubs', 'spades');
 
         return response()->json($highest_card_index);
     }
@@ -393,10 +393,10 @@ class TarnibController extends Controller
         $highest_index = 0;
 
         for ($i=1; $i < count($cards); $i++) { 
-            // clock($cards[$i]);
-            // clock($highest_index);
-            // clock($this->cardValue($cards[$i])['suit'] == $current_play_suit);
-            // clock($this->cardValue($cards[$highest_index])['suit'] == $tarnib);
+            clock($cards[$i]);
+            clock($highest_index);
+            clock($this->cardValue($cards[$i])['suit'] == $current_play_suit);
+            clock($this->cardValue($cards[$highest_index])['suit'] == $tarnib);
 
             if($this->cardValue($cards[$i])['suit'] == $current_play_suit){
                 if($this->cardValue($cards[$highest_index])['suit'] == $tarnib){
@@ -407,9 +407,14 @@ class TarnibController extends Controller
                     }
                 }else{
                     if($current_play_suit !=  $tarnib){
-                        if($this->cardValue($cards[$i])['value'] > $this->cardValue($cards[$highest_index])['value']){
+                        if($this->cardValue($cards[$highest_index])['suit'] != $current_play_suit){
                             $highest_index = $i;
+                        }else{
+                            if($this->cardValue($cards[$i])['value'] > $this->cardValue($cards[$highest_index])['value']){
+                                $highest_index = $i;
+                            }
                         }
+                        
                     }else{
                         $highest_index = $i;
                     }
