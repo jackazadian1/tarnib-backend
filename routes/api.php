@@ -31,4 +31,5 @@ Route::post('playCard',  [TarnibController::class, 'playCard']);
 Route::post('setNewTurn',  [TarnibController::class, 'setNewTurn']);
 Route::post('setNewRound',  [TarnibController::class, 'setNewRound']);
 Route::post('moveToNewRoom',  [TarnibController::class, 'moveToNewRoom']);
+Route::get('getAnalytics',  [TarnibController::class, 'getAnalytics']);
 Route::get('test',  [TarnibController::class, 'test']);

@@ -305,13 +305,23 @@ class TarnibController extends Controller
     }
 
     function setTarnib(Request $request){
-        $round_id = DB::table('rooms')->where('room_id', $request->room_id)->first()->round_id;
+        $room = DB::table('rooms')->where('room_id', $request->room_id)->first();
+        $round_id = $room->round_id;
         $data = [
             'tarnib' => $request->tarnib,
             'goal' => $request->goal,
             'player_turn' => $request->player_turn
         ];
-        DB::table('rounds')->where('id', $round_id)->update($data);
+        $round = DB::table('rounds')->where('id', $round_id);
+        $round->update($data);
+        DB::table('analytics')->insert([
+            'room_id' => $request->room_id,
+            'round_id' => $round_id,
+            'player_1_cards' => $round->player_1_cards,
+            'player_2_cards' => $round->player_2_cards,
+            'player_3_cards' => $round->player_3_cards,
+            'player_4_cards' => $round->player_4_cards,
+        ]);
 
         broadcast(new \App\Events\TarnibChooseTarnibEvent($data, $request->room_id))->toOthers();
 
@@ -393,10 +403,10 @@ class TarnibController extends Controller
         $highest_index = 0;
 
         for ($i=1; $i < count($cards); $i++) { 
-            clock($cards[$i]);
-            clock($highest_index);
-            clock($this->cardValue($cards[$i])['suit'] == $current_play_suit);
-            clock($this->cardValue($cards[$highest_index])['suit'] == $tarnib);
+            // clock($cards[$i]);
+            // clock($highest_index);
+            // clock($this->cardValue($cards[$i])['suit'] == $current_play_suit);
+            // clock($this->cardValue($cards[$highest_index])['suit'] == $tarnib);
 
             if($this->cardValue($cards[$i])['suit'] == $current_play_suit){
                 if($this->cardValue($cards[$highest_index])['suit'] == $tarnib){
@@ -552,6 +562,11 @@ class TarnibController extends Controller
         broadcast(new \App\Events\TarnibMoveToNewRoomEvent($new_room_id, $request->room_id))->toOthers();
 
         return response()->json(['room_id' => $new_room_id]);
+    }
+
+    function getAnalytics(Request $request){
+        $data = DB::table('analytics')->join('rounds','analytics.round_id','=','rounds.id')->join('rooms', 'analytics.room_id', '=', 'rooms.room_id')->select('analytics.id', 'analytics.room_id', 'analytics.round_id', 'rooms.player_1', 'rooms.player_2', 'rooms.player_3', 'rooms.player_4', 'analytics.player_1_cards', 'analytics.player_2_cards', 'analytics.player_3_cards', 'analytics.player_4_cards', 'rounds.team_1_score', 'rounds.team_2_score', 'rounds.dealer', 'rounds.tarnib', 'rounds.goal', 'rounds.bids_data')->get();
+        return response()->json($data);
     }
 
     function generateRandomString($length = 6) {
