@@ -314,6 +314,7 @@ class TarnibController extends Controller
         ];
         $round = DB::table('rounds')->where('id', $round_id);
         $round->update($data);
+        $round = $round->first();
         DB::table('analytics')->insert([
             'room_id' => $request->room_id,
             'round_id' => $round_id,
