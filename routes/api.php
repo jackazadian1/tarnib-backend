@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TarnibController;
+use App\Http\Controllers\PokerController;
 use App\Http\Controllers\AuthController;
 
 /*
@@ -33,3 +34,14 @@ Route::post('setNewRound',  [TarnibController::class, 'setNewRound']);
 Route::post('moveToNewRoom',  [TarnibController::class, 'moveToNewRoom']);
 Route::get('getAnalytics',  [TarnibController::class, 'getAnalytics']);
 Route::get('test',  [TarnibController::class, 'test']);
+
+
+//poker
+Route::post('create_poker',  [PokerController::class, 'createRoom']);
+Route::get('pokerRoomData',  [PokerController::class, 'getData']);
+Route::get('getPokerRooms',  [PokerController::class, 'getRooms']);
+Route::get('pokerRoomPasswordCheck',  [PokerController::class, 'passwordCheck']);
+Route::post('authenticate',  [PokerController::class, 'authenticate']);
+Route::post('addPokerPlayer',  [PokerController::class, 'addPokerPlayer']);
+Route::post('addChips',  [PokerController::class, 'addChips']);
+Route::post('cashout',  [PokerController::class, 'cashout']);
