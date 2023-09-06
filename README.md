@@ -12,7 +12,7 @@ This repository contains the Laravel backend for the Tarnib card game project. I
 
 ## Installation
 
-1. Clone the repository:
+1. Clone the Repository:
 
 ```
 git clone https://github.com/jackazadian1/tarnib-backend.git
