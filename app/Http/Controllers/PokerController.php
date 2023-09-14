@@ -9,6 +9,14 @@ use Illuminate\Support\Facades\Log;
 
 class PokerController extends Controller
 {
+    public function __construct()
+    {
+        $one_week_ago = date("Y-m-d H:i:s", strtotime("-3 day"));
+        DB::table('poker_rooms')->where('created_at', '<=', $one_week_ago)->update([
+            'is_open' => 0
+        ]);
+    }
+
 
     public function createRoom(Request $request){
 
@@ -23,11 +31,7 @@ class PokerController extends Controller
             'updated_at' => $now
         ]);
 
-        $one_week_ago = date("Y-m-d H:i:s", strtotime("-1 week"));
 
-        DB::table('poker_rooms')->where('created_at', '<=', $one_week_ago)->update([
-            'is_open' => 0
-        ]);
         return response()->json(['success' => true, 'room_id' => $room_id]);
     }
 
@@ -49,7 +53,7 @@ class PokerController extends Controller
     function passwordCheck(Request $request){
         $room = DB::table('poker_rooms')->where('room_id', $request->room_id)->first();
 
-        return response()->json($room->password != null);
+        return response()->json(['date' => $room->created_at, 'has_password' => $room->password != null]);
     }
 
     function authenticate(Request $request){
@@ -76,6 +80,11 @@ class PokerController extends Controller
         return response()->json(['success' => true, 'id' => $id]);
     }
 
+    public function deletePokerPlayer(Request $request){
+        DB::table('poker_players')->where('id', $request->id)->delete();
+        return response()->json(['success' => true]);
+    }
+
     public function addChips(Request $request){
 
         $player = DB::table('poker_players')->where('id', $request->id);
@@ -94,14 +103,14 @@ class PokerController extends Controller
         ]);
 
         $room = DB::table('poker_rooms')->where('room_id', $request->room_id);
+
         $activePlayers = DB::table('poker_players')->where('room_id', $room->first()->id)->where('cash_out_amount', -1)->get();
 
         $game_ended = false;
         $remaining_bank = 0;
         $last_player = -1;
-        if(count($activePlayers) == 1){//end the game
+        if(count($activePlayers) == 1 && $request->amount != -1){//end the game
             $last_player = $activePlayers[0]->id;
-            $room->update(['is_open' => 0]);
             $game_ended = true;
             $players = DB::table('poker_players')->where('room_id', $room->first()->id)->get();
 

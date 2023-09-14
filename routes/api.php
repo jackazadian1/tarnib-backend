@@ -43,5 +43,6 @@ Route::get('getPokerRooms',  [PokerController::class, 'getRooms']);
 Route::get('pokerRoomPasswordCheck',  [PokerController::class, 'passwordCheck']);
 Route::post('authenticate',  [PokerController::class, 'authenticate']);
 Route::post('addPokerPlayer',  [PokerController::class, 'addPokerPlayer']);
+Route::post('deletePokerPlayer',  [PokerController::class, 'deletePokerPlayer']);
 Route::post('addChips',  [PokerController::class, 'addChips']);
 Route::post('cashout',  [PokerController::class, 'cashout']);
