@@ -11,10 +11,21 @@ class PokerController extends Controller
 {
     public function __construct()
     {
-        $one_week_ago = date("Y-m-d H:i:s", strtotime("-3 day"));
-        DB::table('poker_rooms')->where('created_at', '<=', $one_week_ago)->update([
+        $one_week_ago = date("Y-m-d H:i:s", strtotime("-1 week"));
+        $three_days_ago = date("Y-m-d H:i:s", strtotime("-3 day"));
+        DB::table('poker_rooms')->where('is_open', 1)->where('created_at', '<=', $three_days_ago)->update([
             'is_open' => 0
         ]);
+
+        $rooms = DB::table('poker_rooms')->where('created_at', '<=', $one_week_ago);
+        $rooms_data = $rooms->get();
+        $room_ids = [];
+        foreach($rooms_data as $room){
+            $room_ids[] = $room->id;
+        }
+
+        DB::table('poker_players')->whereIn('id', $room_ids)->delete();
+        $rooms->delete();
     }
 
 
@@ -25,6 +36,7 @@ class PokerController extends Controller
         $now = date('Y-m-d H:i:s');
         $id = DB::table('poker_rooms')->insertGetId([
             'room_id' => $room_id,
+            'name' => $request->name,
             'password' => $request->password,
             'is_open' => true,
             'created_at' => $now,
@@ -128,7 +140,6 @@ class PokerController extends Controller
 
         return response()->json(['success' => true, 'game_ended' => $game_ended, 'last_player' => $last_player, 'remaining_bank' => $remaining_bank]);
     }
-
 
     function generateRandomString($length = 6) {
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
