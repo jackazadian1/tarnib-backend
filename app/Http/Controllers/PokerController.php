@@ -76,11 +76,12 @@ class PokerController extends Controller
 
     public function addPokerPlayer(Request $request){
 
-        $room = DB::table('poker_rooms')->where('room_id', $request->room_id)->first();
+        $room = DB::table('poker_rooms')->where('room_id', $request->room_id);
+        $room_data = $room->first();
         $now = date('Y-m-d H:i:s');
 
         $id = DB::table('poker_players')->insertGetId([
-            'room_id' => $room->id,
+            'room_id' => $room_data->id,
             'name' => $request->player_name,
             'buy_in_amount' => $request->buy_in_amount,
             'cash_out_amount' => -1,
@@ -88,43 +89,110 @@ class PokerController extends Controller
             'updated_at' => $now
         ]);
 
+        $history = json_decode($room_data->history);
+        $room_data = $room->first();
+        $updated_history = [
+            "action" => "player_added",
+            "player_id" => $id,
+            "player_name" => $request->player_name,
+            "buy_in_amount" => $request->buy_in_amount,
+            "total_buy_in_amount" => $request->buy_in_amount,
+            "time" => $request->time
+        ];
+        $history[] = $updated_history;
+        $room->update([
+            'history' => json_encode($history)
+        ]);
 
-        return response()->json(['success' => true, 'id' => $id]);
+
+        return response()->json(['success' => true, 'id' => $id, 'history' => $history]);
     }
 
     public function deletePokerPlayer(Request $request){
-        DB::table('poker_players')->where('id', $request->id)->delete();
-        return response()->json(['success' => true]);
+        $player = DB::table('poker_players')->where('id', $request->id);
+        $player_data = $player->first();
+        $room = DB::table('poker_rooms')->where('room_id', $request->room_id);
+        $room_data = $room->first();
+
+        $history = json_decode($room_data->history);
+        $updated_history = [
+            "action" => "player_deleted",
+            "player_id" => $request->id,
+            "player_name" => $player_data->name,
+            "time" => $request->time
+        ];
+        $history[] = $updated_history;
+        $room->update([
+            'history' => json_encode($history)
+        ]);
+
+        $player->delete();
+        return response()->json(['success' => true, 'history' => $history]);
     }
 
     public function addChips(Request $request){
 
         $player = DB::table('poker_players')->where('id', $request->id);
-        $current_balance = $player->first()->buy_in_amount;
+        $player_data = $player->first();
+        $room = DB::table('poker_rooms')->where('room_id', $request->room_id);
+        $room_data = $room->first();
+
+        $current_balance = $player_data->buy_in_amount;
         $player->update([
             "buy_in_amount" => $current_balance + $request->amount
         ]);
 
-        return response()->json(['success' => true, 'new_balance' => $current_balance + $request->amount]);
+        $history = json_decode($room_data->history);
+        $updated_history = [
+            "action" => "added_chips",
+            "player_id" => $request->id,
+            "player_name" => $player_data->name,
+            "buy_in_amount" => $request->amount,
+            "total_buy_in_amount" => $current_balance + $request->amount,
+            "time" => $request->time
+        ];
+        $history[] = $updated_history;
+        $room->update([
+            'history' => json_encode($history)
+        ]);
+
+        return response()->json(['success' => true, 'new_balance' => $current_balance + $request->amount, 'history' => $history]);
     }
 
     public function cashout(Request $request){
 
-        $player = DB::table('poker_players')->where('id', $request->id)->update([
+        $player = DB::table('poker_players')->where('id', $request->id);
+        $player_data = $player->first();
+        $room = DB::table('poker_rooms')->where('room_id', $request->room_id);
+        $room_data = $room->first();
+
+        $player->update([
             "cash_out_amount" => $request->amount
         ]);
 
-        $room = DB::table('poker_rooms')->where('room_id', $request->room_id);
+        $history = json_decode($room_data->history);
+        $action = "player_cashed_out";
+        if($request->amount == -1)
+            $action = "undo_player_cashout";
+        $updated_history = [
+            "action" => $action,
+            "player_id" => $request->id,
+            "player_name" => $player_data->name,
+            "cash_out_amount" => $request->amount,
+            "time" => $request->time
+        ];
+        $history[] = $updated_history;
 
-        $activePlayers = DB::table('poker_players')->where('room_id', $room->first()->id)->where('cash_out_amount', -1)->get();
+        $activePlayers = DB::table('poker_players')->where('room_id', $room_data->id)->where('cash_out_amount', -1)->get();
 
         $game_ended = false;
         $remaining_bank = 0;
         $last_player = -1;
+        
         if(count($activePlayers) == 1 && $request->amount != -1){//end the game
             $last_player = $activePlayers[0]->id;
             $game_ended = true;
-            $players = DB::table('poker_players')->where('room_id', $room->first()->id)->get();
+            $players = DB::table('poker_players')->where('room_id', $room_data->id)->get();
 
             foreach ($players as $key => $player) {
                 $remaining_bank += $player->buy_in_amount;
@@ -133,12 +201,27 @@ class PokerController extends Controller
                 }
             }
 
-            DB::table('poker_players')->where('id', $last_player)->update([
+            $last_player_db = DB::table('poker_players')->where('id', $last_player);
+            $last_player_db->update([
                 'cash_out_amount' => $remaining_bank
             ]);
+
+            $new_updated_history = [
+                "action" => 'player_cashed_out_remainder',
+                "player_id" => $last_player,
+                "player_name" => $last_player_db->first()->name,
+                "cash_out_amount" => $remaining_bank,
+                "time" => $request->time
+            ];
+            $history[] = $new_updated_history;
         }
 
-        return response()->json(['success' => true, 'game_ended' => $game_ended, 'last_player' => $last_player, 'remaining_bank' => $remaining_bank]);
+
+        $room->update([
+            'history' => json_encode($history)
+        ]);
+
+        return response()->json(['success' => true, 'game_ended' => $game_ended, 'last_player' => $last_player, 'remaining_bank' => $remaining_bank, 'history' => $history]);
     }
 
     function generateRandomString($length = 6) {
